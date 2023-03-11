@@ -124,6 +124,7 @@ class MyStack extends TerraformStack {
       },
       region,
       schedule: '0 0 * * *',
+      timeZone: 'Asia/Tokyo',
     });
 
     new google.cloudbuildTrigger.CloudbuildTrigger(this, 'buildTrigger', {
