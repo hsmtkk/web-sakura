@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/GoogleCloudPlatform/functions-framework-go v1.6.1
 	github.com/cloudevents/sdk-go/v2 v2.13.0
+	golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420
 )
 
 require (
