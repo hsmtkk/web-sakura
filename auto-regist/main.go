@@ -92,6 +92,7 @@ func (h *handler) regist(childID string) error {
 		return fmt.Errorf("failed to marshal JSON; %w", err)
 	}
 	saveData := string(saveDataBytes)
+	log.Print(saveData)
 	form := url.Values{"save_data": []string{saveData}, "child_id": []string{childID}}
 	if err := h.httpPost(postURL, form); err != nil {
 		return err
