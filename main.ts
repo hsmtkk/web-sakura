@@ -2,7 +2,6 @@ import { Construct } from "constructs";
 import { App, AssetType, TerraformAsset, TerraformStack } from "cdktf";
 import * as google from '@cdktf/provider-google';
 import * as path from 'path';
-import * as buffer from 'buffer';
 
 const project = 'web-sakura';
 const region = 'us-central1';
@@ -71,59 +70,44 @@ class MyStack extends TerraformStack {
       source: asset.path,
     });
 
-    const schedulerTopic = new google.pubsubTopic.PubsubTopic(this, 'schedulerTopic', {
-      name: 'scheduler-topic',
-    });
-
-    new google.cloudfunctions2Function.Cloudfunctions2Function(this, 'autoRegist', {
-      buildConfig: {
+    const autoRegist = new google.cloudfunctionsFunction.CloudfunctionsFunction(this, 'autoRegist', {
         entryPoint: 'EntryPoint',
+        ingressSettings: 'ALLOW_INTERNAL_ONLY',
+        minInstances: 0,
+        maxInstances: 1,
+        name: 'auto-regist',
+        region,
         runtime: 'go120',
-        source: {
-          storageSource: {
-            bucket: assetBucket.name,
-            object: assetObject.name,
-          },
-        },
-      },
-      eventTrigger: {
-        eventType: 'google.cloud.pubsub.topic.v1.messagePublished',
-        pubsubTopic: schedulerTopic.id,
-      },
-      location: region,
-      name: 'auto-regist',
-      serviceConfig: {
-        minInstanceCount: 0,
-        maxInstanceCount: 1,
         secretEnvironmentVariables: [
-        {
-          key: 'ACCOUNT',
-          projectId: project,
-          secret: accountSecret.secretId,
-          version: '1',
-        },
-        {
-          key: 'PASSWORD',
-          projectId: project,
-          secret: passwordSecret.secretId,
-          version: '1',
-        },
-        {
-          key: 'CHILD_ID',
-          projectId: project,
-          secret: childIDSecret.secretId,
-          version: '1',
-        },
+            {
+                key: 'ACCOUNT',
+                projectId: project,
+                secret: accountSecret.secretId,
+                version: '1',
+              },
+              {
+                key: 'PASSWORD',
+                projectId: project,
+                secret: passwordSecret.secretId,
+                version: '1',
+              },
+              {
+                key: 'CHILD_ID',
+                projectId: project,
+                secret: childIDSecret.secretId,
+                version: '1',
+              },      
         ],
         serviceAccountEmail: autoRegistRunner.email,
-      },
+        sourceArchiveBucket: assetBucket.name,
+        sourceArchiveObject: assetObject.name,
+        triggerHttp: true,
     });
 
     new google.cloudSchedulerJob.CloudSchedulerJob(this, 'schedule', {
       name: 'auto-regist-schedule',
-      pubsubTarget: {
-        data: buffer.Buffer.from('placeholder').toString('base64'),
-        topicName: schedulerTopic.id,
+      httpTarget: {
+        uri: autoRegist.httpsTriggerUrl,
       },
       region,
       schedule: '0 0 * * *',

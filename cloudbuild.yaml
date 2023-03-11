@@ -6,7 +6,6 @@ steps:
   - functions
   - deploy
   - auto-regist
-  - --gen2
   - --region=${_REGION}
 substitutions:
   _REGION: us-central1
