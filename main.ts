@@ -33,7 +33,7 @@ class MyStack extends TerraformStack {
     });
 
     const childIDSecret = new google.secretManagerSecret.SecretManagerSecret(this, 'childID', {
-      secretId: 'childID',
+      secretId: 'child-id',
       replication: {
         automatic: true,
       },
@@ -46,7 +46,7 @@ class MyStack extends TerraformStack {
 
     const assetBucket = new google.storageBucket.StorageBucket(this, 'assetBucket', {
       location: region,
-      name: `{project}-asset`,
+      name: `${project}-asset`,
     });
 
     const assetObject = new google.storageBucketObject.StorageBucketObject(this, 'assetObject', {
@@ -55,9 +55,13 @@ class MyStack extends TerraformStack {
       source: asset.path,
     });
 
+    const schedulerTopic = new google.pubsubTopic.PubsubTopic(this, 'schedulerTopic', {
+      name: 'scheduler-topic',
+    });
+
     new google.cloudfunctions2Function.Cloudfunctions2Function(this, 'autoRegist', {
       buildConfig: {
-        entryPoint: 'entry',
+        entryPoint: 'EntryPoint',
         runtime: 'go120',
         source: {
           storageSource: {
@@ -66,6 +70,11 @@ class MyStack extends TerraformStack {
           },
         },
       },
+      eventTrigger: {
+        eventType: 'google.cloud.pubsub.topic.v1.messagePublished',
+        pubsubTopic: schedulerTopic.id,
+      },
+      location: region,
       name: 'auto-regist',
       serviceConfig: {
         minInstanceCount: 0,
@@ -75,23 +84,32 @@ class MyStack extends TerraformStack {
           key: 'ACCOUNT',
           projectId: project,
           secret: accountSecret.secretId,
-          version: 'latest',
+          version: '1',
         },
         {
           key: 'PASSWORD',
           projectId: project,
           secret: passwordSecret.secretId,
-          version: 'latest',
+          version: '1',
         },
         {
           key: 'CHILD_ID',
           projectId: project,
           secret: childIDSecret.secretId,
-          version: 'latest',
+          version: '1',
         },
         ],
         serviceAccountEmail: autoRegistRunner.email,
       },
+    });
+
+    new google.cloudSchedulerJob.CloudSchedulerJob(this, 'schedule', {
+      name: 'auto-regist-schedule',
+      pubsubTarget: {
+        topicName: schedulerTopic.id,
+      },
+      region,
+      schedule: '0 0 * * *',
     });
   }
 }
