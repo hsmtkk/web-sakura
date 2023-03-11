@@ -6,6 +6,8 @@ import * as path from 'path';
 const project = 'web-sakura';
 const region = 'us-central1';
 const repository = 'web-sakura';
+const saveDataCollection = 'save-data-collection';
+const saveDataDocument = 'save-data-document';
 
 class MyStack extends TerraformStack {
   constructor(scope: Construct, id: string) {
@@ -80,8 +82,18 @@ class MyStack extends TerraformStack {
       source: asset.path,
     });
 
+    new google.firestoreDocument.FirestoreDocument(this, 'placeholderDocument', {
+        collection: saveDataCollection,
+        documentId: saveDataDocument,
+        fields: '{"something":{"mapValue":{"fields":{"akey":{"stringValue":"avalue"}}}}}',
+    });
+
     const autoRegist = new google.cloudfunctionsFunction.CloudfunctionsFunction(this, 'autoRegist', {
         entryPoint: 'EntryPoint',
+        environmentVariables: {
+            'SAVE_DATA_COLLECTION': saveDataCollection,        
+            'SAVE_DATA_DOCUMENT': saveDataDocument,
+        },
         ingressSettings: 'ALLOW_ALL',
         minInstances: 0,
         maxInstances: 1,
