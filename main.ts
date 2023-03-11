@@ -37,6 +37,12 @@ class MyStack extends TerraformStack {
       role: 'roles/secretmanager.secretAccessor',
     });
 
+    new google.projectIamMember.ProjectIamMember(this, 'allowFirestoreView', {
+        member: `serviceAccount:${autoRegistRunner.email}`,
+        project,
+        role: 'roles/datastore.viewer',
+      });
+  
     const accountSecret = new google.secretManagerSecret.SecretManagerSecret(this, 'account', {
       secretId: 'account',
       replication: {
