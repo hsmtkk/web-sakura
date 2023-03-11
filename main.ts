@@ -53,6 +53,14 @@ class MyStack extends TerraformStack {
     });    
 
     const assetBucket = new google.storageBucket.StorageBucket(this, 'assetBucket', {
+      lifecycleRule: [{
+        action: {
+            type: 'Delete',
+        },
+        condition: {
+            age: 1,
+        },
+      }],
       location: region,
       name: `${project}-asset`,
     });
