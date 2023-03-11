@@ -23,7 +23,7 @@ class MyStack extends TerraformStack {
     new google.projectIamMember.ProjectIamMember(this, 'allowSecretAccess', {
       member: `serviceAccount:${autoRegistRunner.email}`,
       project,
-      role: 'rolees/secretmanager.secretAccessor',
+      role: 'roles/secretmanager.secretAccessor',
     });
 
     const accountSecret = new google.secretManagerSecret.SecretManagerSecret(this, 'account', {
