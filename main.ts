@@ -2,9 +2,11 @@ import { Construct } from "constructs";
 import { App, AssetType, TerraformAsset, TerraformStack } from "cdktf";
 import * as google from '@cdktf/provider-google';
 import * as path from 'path';
+import * as buffer from 'buffer';
 
 const project = 'web-sakura';
 const region = 'us-central1';
+const repository = 'web-sakura';
 
 class MyStack extends TerraformStack {
   constructor(scope: Construct, id: string) {
@@ -16,6 +18,12 @@ class MyStack extends TerraformStack {
 
     const autoRegistRunner = new google.serviceAccount.ServiceAccount(this, 'autoRegistRunner', {
       accountId: 'auto-regist-runner',
+    });
+
+    new google.projectIamMember.ProjectIamMember(this, 'allowSecretAccess', {
+      member: `serviceAccount:${autoRegistRunner.email}`,
+      project,
+      role: 'rolees/secretmanager.secretAccessor',
     });
 
     const accountSecret = new google.secretManagerSecret.SecretManagerSecret(this, 'account', {
@@ -106,10 +114,22 @@ class MyStack extends TerraformStack {
     new google.cloudSchedulerJob.CloudSchedulerJob(this, 'schedule', {
       name: 'auto-regist-schedule',
       pubsubTarget: {
+        data: buffer.Buffer.from('placeholder').toString('base64'),
         topicName: schedulerTopic.id,
       },
       region,
       schedule: '0 0 * * *',
+    });
+
+    new google.cloudbuildTrigger.CloudbuildTrigger(this, 'buildTrigger', {
+      filename: 'cloudbuild.yaml',
+      github: {
+        owner: 'hsmtkk',
+        name: repository,
+        push: {
+          branch: 'main',
+        },
+      },
     });
   }
 }
