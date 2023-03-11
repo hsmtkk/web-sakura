@@ -7,5 +7,6 @@ steps:
   - deploy
   - auto-regist
   - --region=${_REGION}
+  - --source=.
 substitutions:
   _REGION: us-central1
