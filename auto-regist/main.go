@@ -1,7 +1,6 @@
 package function
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,7 +11,6 @@ import (
 	"os"
 
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
-	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"golang.org/x/net/publicsuffix"
 )
 
@@ -21,12 +19,21 @@ const LOGIN_PATH = "/pages/accounts/login.php"
 const REGIST_PATH = "/pages/contact-book/regist-api.php"
 
 func init() {
-	functions.CloudEvent("EntryPoint", EntryPoint)
+	functions.HTTP("EntryPoint", EntryPoint)
 }
 
-func EntryPoint(ctx context.Context, e cloudevents.Event) error {
+func EntryPoint(w http.ResponseWriter, r *http.Request) {
 	log.Print("begin")
+	if err := entryPointInner(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
+	log.Print("end")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+}
 
+func entryPointInner() error {
 	account := neededEnvVar("ACCOUNT")
 	password := neededEnvVar("PASSWORD")
 	childID := neededEnvVar("CHILD_ID")
@@ -42,8 +49,6 @@ func EntryPoint(ctx context.Context, e cloudevents.Event) error {
 	if err := hdl.regist(childID); err != nil {
 		return err
 	}
-
-	log.Print("end")
 	return nil
 }
 
