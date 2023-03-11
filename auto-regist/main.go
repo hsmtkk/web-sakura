@@ -147,7 +147,7 @@ type registData struct {
 func newRegistData() registData {
 	return registData{
 		DateMonth:                "03",
-		DateDay:                  "10",
+		DateDay:                  "09",
 		MoodyLastnight:           "1",
 		DefecationLastnightCount: "0",
 		DefecationLastnight:      "0",
