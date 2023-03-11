@@ -9,6 +9,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"golang.org/x/net/publicsuffix"
@@ -104,7 +105,7 @@ func (h *handler) httpPost(postURL string, form url.Values) error {
 		return fmt.Errorf("failed to send HTTP POST; %w", err)
 	}
 	defer resp.Body.Close()
-	respDump, err := httputil.DumpResponse(resp, true)
+	respDump, err := httputil.DumpResponse(resp, false)
 	if err != nil {
 		return fmt.Errorf("failed to dump HTTP response; %w", err)
 	}
@@ -150,9 +151,12 @@ type registData struct {
 }
 
 func newRegistData() registData {
+	now := time.Now()
+	month := now.Format("01")
+	day := now.Format("02")
 	return registData{
-		DateMonth:                "03",
-		DateDay:                  "09",
+		DateMonth:                month,
+		DateDay:                  day,
 		MoodyLastnight:           "1",
 		DefecationLastnightCount: "0",
 		DefecationLastnight:      "0",
