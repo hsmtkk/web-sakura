@@ -72,7 +72,7 @@ class MyStack extends TerraformStack {
 
     const autoRegist = new google.cloudfunctionsFunction.CloudfunctionsFunction(this, 'autoRegist', {
         entryPoint: 'EntryPoint',
-        ingressSettings: 'ALLOW_INTERNAL_ONLY',
+        ingressSettings: 'ALLOW_ALL',
         minInstances: 0,
         maxInstances: 1,
         name: 'auto-regist',
