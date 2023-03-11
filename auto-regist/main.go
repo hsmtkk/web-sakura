@@ -1,6 +1,7 @@
 package function
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,8 +10,10 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"golang.org/x/net/publicsuffix"
 )
@@ -25,7 +28,7 @@ func init() {
 
 func EntryPoint(w http.ResponseWriter, r *http.Request) {
 	log.Print("begin")
-	if err := entryPointInner(); err != nil {
+	if err := entryPointInner(r.Context()); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 	}
@@ -34,10 +37,13 @@ func EntryPoint(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
-func entryPointInner() error {
+func entryPointInner(ctx context.Context) error {
 	account := neededEnvVar("ACCOUNT")
 	password := neededEnvVar("PASSWORD")
 	childID := neededEnvVar("CHILD_ID")
+	projectID := neededEnvVar("PROJECT_ID")
+	saveDataCollection := neededEnvVar("SAVE_DATA_COLLECTION")
+	saveDataDocument := neededEnvVar("SAVE_DATA_DOCUMENT")
 
 	hdl, err := newHandler()
 	if err != nil {
@@ -47,7 +53,7 @@ func entryPointInner() error {
 	if err := hdl.login(account, password); err != nil {
 		return err
 	}
-	if err := hdl.regist(childID); err != nil {
+	if err := hdl.regist(ctx, projectID, saveDataCollection, saveDataDocument, childID); err != nil {
 		return err
 	}
 	return nil
@@ -85,9 +91,13 @@ func (h *handler) login(account, password string) error {
 	return nil
 }
 
-func (h *handler) regist(childID string) error {
+func (h *handler) regist(ctx context.Context, projectID, saveDataCollection, saveDataDocument, childID string) error {
 	postURL := fmt.Sprintf("https://%s%s", WEB_SAKURA, REGIST_PATH)
-	saveDataBytes, err := json.Marshal(newRegistData())
+	registData, err := newRegistData(ctx, projectID, saveDataCollection, saveDataDocument)
+	if err != nil {
+		return err
+	}
+	saveDataBytes, err := json.Marshal(registData)
 	if err != nil {
 		return fmt.Errorf("failed to marshal JSON; %w", err)
 	}
@@ -151,41 +161,63 @@ type registData struct {
 	Thermometry              string `json:"thermometry"`
 }
 
-func newRegistData() registData {
-	now := time.Now()
-	month := now.Format("01")
-	day := now.Format("02")
-	return registData{
-		DateMonth:                month,
-		DateDay:                  day,
-		MoodyLastnight:           "1",
-		DefecationLastnightCount: "0",
-		DefecationLastnight:      "0",
-		DinnerHour:               "19",
-		DinnerMinus:              "00",
-		DinnerComment:            "食べました。",
-		Bathing:                  "2",
-		SleepHour:                "20",
-		SleepMinus:               "30",
-		WakeupHour:               "06",
-		WakeupMinus:              "30",
-		MoodyMorning:             "1",
-		DefecationMorningCount:   "0",
-		DefecationMorning:        "0",
-		BreakfastHour:            "07",
-		BreakfastMinus:           "00",
-		BreakfastComment:         "食べました。",
-		ThermometryHour:          "07",
-		ThermometryMinus:         "30",
-		ThermometryPre:           "36",
-		ThermometryAfter:         "7",
-		Swimming:                 "1", // 1なし 2あり
-		Appearance:               "いつも通りです。",
-		Message:                  "",
-		RelationshipID:           "父",
-		PickupHour:               "17",
-		PickupMinus:              "50",
-		SaveState:                "2",
-		Thermometry:              "36.7",
+func newRegistData(ctx context.Context, projectID, saveDataCollection, saveDataDocument string) (registData, error) {
+	var regData registData
+	clt, err := firestore.NewClient(ctx, projectID)
+	if err != nil {
+		return regData, fmt.Errorf("failed to make Firestore client; %w", err)
 	}
+	defer clt.Close()
+	snap, err := clt.Collection(saveDataCollection).Doc(saveDataDocument).Get(ctx)
+	if err != nil {
+		return regData, fmt.Errorf("failed to get Firestore document; %w", err)
+	}
+	if err := snap.DataTo(&regData); err != nil {
+		return regData, fmt.Errorf("failed to convert data; %w", err)
+	}
+
+	now := time.Now()
+	regData.DateMonth = now.Format("01")
+	regData.DateDay = now.Format("02")
+	thermos := strings.Split(regData.Thermometry, ".")
+	regData.ThermometryPre = thermos[0]
+	regData.ThermometryAfter = thermos[1]
+
+	return regData, nil
+
+	/*
+		return registData{
+			DateMonth:                month,
+			DateDay:                  day,
+			MoodyLastnight:           "1",
+			DefecationLastnightCount: "0",
+			DefecationLastnight:      "0",
+			DinnerHour:               "19",
+			DinnerMinus:              "00",
+			DinnerComment:            "食べました。",
+			Bathing:                  "2",
+			SleepHour:                "20",
+			SleepMinus:               "30",
+			WakeupHour:               "06",
+			WakeupMinus:              "30",
+			MoodyMorning:             "1",
+			DefecationMorningCount:   "0",
+			DefecationMorning:        "0",
+			BreakfastHour:            "07",
+			BreakfastMinus:           "00",
+			BreakfastComment:         "食べました。",
+			ThermometryHour:          "07",
+			ThermometryMinus:         "30",
+			ThermometryPre:           "36",
+			ThermometryAfter:         "7",
+			Swimming:                 "1", // 1なし 2あり
+			Appearance:               "いつも通りです。",
+			Message:                  "",
+			RelationshipID:           "父",
+			PickupHour:               "17",
+			PickupMinus:              "50",
+			SaveState:                "2",
+			Thermometry:              "36.7",
+		}, nil
+	*/
 }
