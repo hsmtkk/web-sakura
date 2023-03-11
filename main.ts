@@ -15,6 +15,16 @@ class MyStack extends TerraformStack {
       project,
     });
 
+    const schedulerRunner = new google.serviceAccount.ServiceAccount(this, 'schedulerRunner', {
+        accountId: 'scheduler-runner',
+    });
+
+    new google.projectIamMember.ProjectIamMember(this, 'allowInvokeFunction', {
+        member: `serviceAccount:${schedulerRunner.email}`,
+        project,
+        role: 'roles/cloudfunctions.invoker',
+    });
+
     const autoRegistRunner = new google.serviceAccount.ServiceAccount(this, 'autoRegistRunner', {
       accountId: 'auto-regist-runner',
     });
@@ -107,6 +117,9 @@ class MyStack extends TerraformStack {
     new google.cloudSchedulerJob.CloudSchedulerJob(this, 'schedule', {
       name: 'auto-regist-schedule',
       httpTarget: {
+        oidcToken: {
+            serviceAccountEmail: schedulerRunner.email,
+        },
         uri: autoRegist.httpsTriggerUrl,
       },
       region,
