@@ -88,15 +88,10 @@ class MyStack extends TerraformStack {
       source: asset.path,
     });
 
-    new google.firestoreDocument.FirestoreDocument(this, 'placeholderDocument', {
-        collection: saveDataCollection,
-        documentId: saveDataDocument,
-        fields: '{"something":{"mapValue":{"fields":{"akey":{"stringValue":"avalue"}}}}}',
-    });
-
     const autoRegist = new google.cloudfunctionsFunction.CloudfunctionsFunction(this, 'autoRegist', {
         entryPoint: 'EntryPoint',
         environmentVariables: {
+            'PROJECT_ID': project,
             'SAVE_DATA_COLLECTION': saveDataCollection,        
             'SAVE_DATA_DOCUMENT': saveDataDocument,
         },
