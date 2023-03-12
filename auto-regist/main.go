@@ -176,9 +176,15 @@ func newRegistData(ctx context.Context, projectID, saveDataCollection, saveDataD
 		return regData, fmt.Errorf("failed to convert data; %w", err)
 	}
 
+	location, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		return regData, fmt.Errorf("failed to set timezone; %w", err)
+	}
+	time.Local = location
 	now := time.Now()
 	regData.DateMonth = now.Format("01")
 	regData.DateDay = now.Format("02")
+
 	thermos := strings.Split(regData.Thermometry, ".")
 	regData.ThermometryPre = thermos[0]
 	regData.ThermometryAfter = thermos[1]
