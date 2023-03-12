@@ -136,7 +136,7 @@ class MyStack extends TerraformStack {
         uri: autoRegist.httpsTriggerUrl,
       },
       region,
-      schedule: '0 0 * * *',
+      schedule: '0 3 * * *',
       timeZone: 'Asia/Tokyo',
     });
 
